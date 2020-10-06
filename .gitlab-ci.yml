@@ -1,0 +1,30 @@
+image: gitlab/dind
+
+services:
+  - docker:dind
+
+stages:
+- build
+- deploy
+
+containerization:
+  stage: build
+  script:
+  - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD 
+  - docker build -t alsidus098/node_app:latest .
+  - docker push alsidus098/node_app:latest
+
+  
+deploy_to_k8s:
+  image:
+    name: jshimko/kube-tools-aws:latest
+    entrypoint: [""]
+  stage: deploy
+  script: 
+  - apk add py3-pip 
+  - pip3 install awscli six
+  - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  - aws configure set default.region us-east-1
+  - aws eks update-kubeconfig --name eks_cluster_tuto --region us-east-1
+  - kubectl apply -f kubernetes_manifest/. 

@@ -1,0 +1,91 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: mongo-gp2
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+mountOptions:
+  - debug
+allowedTopologies:
+- matchLabelExpressions:
+  - key: failure-domain.beta.kubernetes.io/zone
+    values:
+    - us-east-1b 
+    - us-east-1f
+
+--- 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pv-claim
+  labels:
+    app: nodejs_app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    app: nodejs_app
+spec:
+ ports:
+ - port: 27017
+   targetPort: 27017
+ clusterIP: None
+ selector:
+   role: mongodb
+
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: mongo
+  labels:
+    app: nodejs_app
+spec:
+  selector:
+    matchLabels:
+      role: mongodb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+     labels:
+       role: mongodb
+    spec:
+     terminationGracePeriodSeconds: 10
+     containers:
+       - name: mongo
+         image: mongo
+         ports:
+           - containerPort: 27017
+         volumeMounts:
+           - name: mongo-persistent-storage
+             mountPath: /data/db
+         env:
+         - name: MONGO_INITDB_ROOT_USERNAME
+           valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: MONGO_INITDB_ROOT_USERNAME
+         - name: MONGO_INITDB_ROOT_PASSWORD
+           valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: MONGO_INITDB_ROOT_PASSWORD
+     volumes:
+      - name: mongo-persistent-storage
+        persistentVolumeClaim:
+          claimName: mongo-pv-claim
+        

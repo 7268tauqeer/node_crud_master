@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: special-config
+  namespace: default
+data:
+  MONGODB_ADDON_URI: mongodb://mongoadmin:secret@mongo:27017
+  MONGO_INITDB_ROOT_USERNAME: mongoadmin
+  MONGO_INITDB_ROOT_PASSWORD: secret
